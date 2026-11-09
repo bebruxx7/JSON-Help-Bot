@@ -6,7 +6,7 @@ A Telegram bot written in Python: it converts messages into the raw JSON of a Te
 
 | Message → JSON | JSON → message |
 |:---:|:---:|
-| <img src="images/message-to-json.png" width="320" alt="Bot replying with the raw Telegram update JSON"> | <img src="images/json-to-message.png" width="320" alt="Bot sending a message rebuilt from JSON"> |
+| [![Bot replying with the raw Telegram update JSON](images/message-to-json.png)](images/message-to-json.png) | [![Bot sending a message rebuilt from JSON](images/json-to-message.png)](images/json-to-message.png) |
 
 ## Features
 
