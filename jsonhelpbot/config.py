@@ -18,6 +18,6 @@ class Config:
         token = (os.getenv("BOT_TOKEN") or "").strip()
         if not token:
             raise RuntimeError(
-                "BOT_TOKEN is not set. Copy .env.example to .env and paste the token from @BotFather."
+                "plZ add yr BOT_TOKEN in .env"
             )
         return cls(bot_token=token)

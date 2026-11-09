@@ -1,35 +1,42 @@
 # JSON Help Bot
 
-Telegram-бот на Python: превращает сообщения в сырой JSON Telegram-апдейта и собирает сообщения обратно из JSON. Работает с текстом и медиа.
+A Telegram bot written in Python: it converts messages into the raw JSON of a Telegram update and builds messages back from that JSON. Text and media are supported.
 
-## Возможности
+## Screenshots
 
-- **Сообщение → JSON.** Бот возвращает исходный Telegram update в виде JSON: с `update_id`, `from`, `chat`, `date` (Unix timestamp), `forward_origin`, `forward_from`, `forward_date`, `entities` и остальными полями.
-  Если JSON не помещается в сообщение (больше ~3500 символов), бот присылает файл `message_<id>.json`.
-- **JSON → сообщение.** Принимает JSON update-а (с объектом `message`) или просто объект сообщения — текстом или файлом `.json`.
-- **Медиа.** Фото, видео, анимации, аудио, голосовые, документы, стикеры и видеозаметки — через `file_id` из Telegram JSON или через прямой `url`.
-- **Разные типы.** Текст, геолокация, место (venue), контакт, опрос, кубик.
-- **Команды.** `/start`, `/help`, `/json` (JSON сообщения, на которое ответили).
+| Message → JSON | JSON → message |
+|:---:|:---:|
+| <img src="images/message-to-json.png" width="320" alt="Bot replying with the raw Telegram update JSON"> | <img src="images/json-to-message.png" width="320" alt="Bot sending a message rebuilt from JSON"> |
 
-## Структура проекта
+## Features
+
+- **Message → JSON.** The bot returns the original Telegram update as JSON, including `update_id`, `from`, `chat`, `date` (Unix timestamp), `forward_origin`, `forward_from`, `forward_date`, `entities` and the other fields.
+  If the JSON does not fit into one message, the bot sends a `message_<id>.json` file.
+- **JSON → message.** Accepts a Telegram update JSON (with a `message` object) or a bare message object, pasted as text or uploaded as a `.json` file.
+- **Media.** Photos, videos, animations, audio, voice messages, documents, stickers and video notes via a `file_id` from the Telegram JSON or a direct `url`.
+- **Content types.** Text, location, venue, contact, poll, dice.
+- **Commands.** `/start`, `/help`, `/json` (JSON of the message you reply to).
+
+## Project structure
 
 ```
 jsonhelpbot/
 ├── jsonhelpbot/
 │   ├── __main__.py              # python -m jsonhelpbot
-│   ├── main.py                  # создание бота и polling
-│   ├── config.py                # чтение BOT_TOKEN из .env
-│   ├── texts.py                 # тексты /start и /help
+│   ├── main.py                  # bot setup and polling
+│   ├── config.py                # reads BOT_TOKEN from .env
+│   ├── texts.py                 # /start and /help texts
 │   ├── handlers/
-│   │   ├── common.py            # команды
-│   │   └── convert.py           # маршрутизация сообщение ↔ JSON
+│   │   ├── common.py            # commands
+│   │   └── convert.py           # message ↔ JSON routing
 │   ├── serializers/
-│   │   ├── schema.py            # константы типов
+│   │   ├── schema.py            # content type constants
 │   │   ├── message_to_json.py   # Update/Message → dict
-│   │   └── json_to_message.py   # dict → вызов Bot API
+│   │   └── json_to_message.py   # dict → Bot API call
 │   └── utils/
-│       ├── json_tools.py        # парсинг и дамп JSON
-│       └── replies.py           # ответ JSON-ом (текст или файл)
+│       ├── json_tools.py        # JSON parsing and dumping
+│       └── replies.py           # JSON reply (text or file)
+├── images/                      # README screenshots
 ├── tests/                       # pytest
 ├── .env.example
 ├── requirements.txt
@@ -37,9 +44,9 @@ jsonhelpbot/
 └── pyproject.toml
 ```
 
-## Быстрый старт
+## Quick start
 
-Нужен Python 3.10+ (проверено на 3.12).
+You need Python 3.10+ (tested on 3.12).
 
 ```powershell
 python -m venv .venv
@@ -49,37 +56,44 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
-Впишите в `.env` токен от [@BotFather](https://t.me/BotFather):
+Put the token from [@BotFather](https://t.me/BotFather) into `.env`:
 
 ```
 BOT_TOKEN=123456789:AA...
 ```
 
-Запуск:
+Run:
 
 ```powershell
 python -m jsonhelpbot
 ```
 
-## Тесты
+## Tests
 
 ```powershell
 pytest
 ```
 
-Тесты не ходят в сеть: проверяются сериализация апдейтов в raw JSON, сборка вызовов Bot API и парсинг JSON.
+The tests do not use the network: they cover serializing updates to raw JSON, building Bot API calls and parsing JSON.
 
-## Формат JSON
+## JSON format
 
-### Сообщение → JSON
+### Message → JSON
 
-Бот отдаёт ровно то, что прислал Telegram, без собственной схемы. Пример пересланного сообщения:
+The bot returns exactly what Telegram sent, with no custom schema. Example automatic reply:
 
 ```json
 {
-  "update_id": 938481316,
+  "update_id": 717620862,
   "message": {
-    "message_id": 3174559,
+    "message_id": 38,
+    "date": 1794261564,
+    "chat": {
+      "id": 1356971297,
+      "type": "private",
+      "username": "reset_data",
+      "first_name": "BebruxX"
+    },
     "from": {
       "id": 1356971297,
       "is_bot": false,
@@ -88,61 +102,37 @@ pytest
       "language_code": "ru",
       "is_premium": true
     },
-    "chat": {
-      "id": 1356971297,
-      "first_name": "BebruxX",
-      "username": "reset_data",
-      "type": "private"
-    },
-    "date": 1794260253,
-    "forward_origin": {
-      "type": "user",
-      "sender_user": {
-        "id": 8896893123,
-        "is_bot": true,
-        "first_name": "Miku",
-        "username": "hatsunemiku_userbot"
-      },
-      "date": 1794259728
-    },
-    "forward_from": {
-      "id": 8896893123,
-      "is_bot": true,
-      "first_name": "Miku",
-      "username": "hatsunemiku_userbot"
-    },
-    "forward_date": 1794259728,
-    "text": "Hello",
+    "text": "hello github!🤯",
     "entities": [
       {
         "type": "custom_emoji",
-        "offset": 0,
-        "length": 5,
-        "custom_emoji_id": "5192670170157423644"
+        "offset": 13,
+        "length": 2,
+        "custom_emoji_id": "5300911472094761394"
       }
     ]
   }
 }
 ```
 
-Даты — Unix timestamp, как в Bot API. Поля со значением `null` не выводятся.
+Dates are Unix timestamps, as in the Bot API. Fields with a `null` value are omitted.
 
-### JSON → сообщение
+### JSON → message
 
-Можно отправить как полный update (бот возьмёт объект `message`), так и просто объект сообщения. Тип определяется по полям сообщения.
+You can send a full update (the bot uses its `message` object) or just a message object. The content type is detected from the message fields.
 
-| Содержимое | Поле |
+| Content | Field |
 |---|---|
-| Текст | `text` |
-| Фото | `photo` — массив размеров, отправляется самый большой |
-| Видео / анимация / аудио / голосовое / документ / стикер / видеозаметка | одноимённое поле |
-| Геолокация | `location` |
-| Место | `venue` |
-| Контакт | `contact` |
-| Опрос | `poll` |
-| Кубик | `dice` |
+| Text | `text` |
+| Photo | `photo` — an array of sizes; the largest one is sent |
+| Video / animation / audio / voice / document / sticker / video note | the field of the same name |
+| Location | `location` |
+| Venue | `venue` |
+| Contact | `contact` |
+| Poll | `poll` |
+| Dice | `dice` |
 
-Примеры:
+Examples:
 
 ```json
 {"text": "Hello"}
@@ -170,14 +160,14 @@ pytest
       "height": 960
     }
   ],
-  "caption": "Кот"
+  "caption": "A cat"
 }
 ```
 
 ```json
 {
   "photo": {"url": "https://example.com/cat.jpg"},
-  "caption": "Кот из интернета"
+  "caption": "A cat from the internet"
 }
 ```
 
@@ -190,8 +180,8 @@ pytest
 ```json
 {
   "poll": {
-    "question": "Пойдём гулять?",
-    "options": [{"text": "Да"}, {"text": "Нет"}],
+    "question": "Shall we go for a walk?",
+    "options": [{"text": "Yes"}, {"text": "No"}],
     "is_anonymous": true,
     "allows_multiple_answers": false
   }
@@ -202,32 +192,31 @@ pytest
 {"dice": {"emoji": "🎲"}}
 ```
 
-При отправке метаданные (`update_id`, `message_id`, `date`, `chat`, `from`, `forward_origin` и т.п.) не обязательны и не влияют на результат. Пересылка не восстанавливается как пересылка: содержимое отправляется обычным сообщением.
+When sending, metadata (`update_id`, `message_id`, `date`, `chat`, `from`, `forward_origin`, etc.) is optional and does not affect the result. A forward is not restored as a forward: its content is sent as a regular message.
 
-### Медиа и `file_id`
+### Media and `file_id`
 
-`file_id` из JSON действителен только для этого же бота. Если нужно отправить медиа «наружу»
-или из другого бота, замените медиа-объект на `{"url": "https://..."}` с прямой ссылкой на файл.
-Для фото можно заменить как весь массив, так и один из элементов на объект с `url`.
+A `file_id` from JSON is valid only in this bot. To send media elsewhere or from another bot, replace the media object with `{"url": "https://..."}` pointing directly to the file.
+For photos you can replace either the whole array or one of its items with an object containing `url`.
 
-Скачивание исходного файла в боте не реализовано: бот отправляет медиа по `file_id`/`url` средствами Bot API.
+The bot does not download the original file: it sends media by `file_id`/`url` through the Bot API.
 
-## Команды
+## Commands
 
-- `/start` — краткая инструкция.
-- `/help` — подробная справка.
-- `/json` — ответьте этой командой на любое сообщение, чтобы получить его raw JSON. Для ответа на сообщение `update_id` недоступен, поэтому выводится только объект сообщения.
+- `/start` — a short overview.
+- `/help` — detailed instructions.
+- `/json` — reply to any message with this command to get its raw JSON. The `update_id` of a replied-to message is not available, so only the message object is returned.
 
-## Ограничения
+## Limitations
 
-- Клавиатуры, инлайн-кнопки, реакции и служебные апдейты не переносятся.
-- Пересылка отправляется как обычное сообщение (forward-поля не восстанавливаются).
-- Кубик при отправке выпадает заново.
-- Опрос создаётся заново: старые голоса и `is_closed` не переносятся; для викторины нужен `correct_option_id`.
-- Медиа по `file_id` работает только в этом боте.
-- Текст сообщения ограничен Telegram (4096 символов), поэтому длинный JSON приходит файлом.
-- JSON-файл на вход — до 5 МБ, кодировка UTF-8.
+- Keyboards, inline buttons, reactions and service updates are not transferred.
+- A forward is sent as a regular message (forward fields are not restored).
+- A dice is rolled anew when sent.
+- A poll is created anew: old votes and `is_closed` are not transferred; a quiz needs `correct_option_id`.
+- Media by `file_id` works only in this bot.
+- Telegram limits a message to 4096 characters, so long JSON is sent as a file.
+- A JSON input file can be up to 5 MB and must be UTF-8 encoded.
 
-## Лицензия
+## License
 
-Учебный/внутренний проект, используйте как хотите.
+Educational/internal project, use it however you like.

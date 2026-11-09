@@ -58,25 +58,25 @@ FORWARDED_UPDATE = {
         "forward_origin": {
             "type": "user",
             "sender_user": {
-                "id": 8896893123,
+                "id": 888888888,
                 "is_bot": True,
-                "first_name": "Miku",
-                "username": "hatsunemiku_userbot",
+                "first_name": "123123",
+                "username": "123123_userbot",
             },
             "date": 1794259728,
         },
         "forward_from": {
-            "id": 8896893123,
+            "id": 888888888,
             "is_bot": True,
-            "first_name": "Miku",
-            "username": "hatsunemiku_userbot",
+            "first_name": "123123",
+            "username": "123123_userbot",
         },
         "forward_date": 1794259728,
-        "text": "Когда попытался заговорить про бутстраппинг компиляторов в тиктоке для любителей побегать с камнем на пляже 😏",
+        "text": "lallallaalaaaaaa",
         "entities": [
             {
                 "type": "custom_emoji",
-                "offset": 108,
+                "offset": 5,
                 "length": 2,
                 "custom_emoji_id": "5192670170157423644",
             }

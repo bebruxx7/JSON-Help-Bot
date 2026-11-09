@@ -10,7 +10,7 @@ from jsonhelpbot.utils.json_tools import MAX_JSON_TEXT, dumps
 async def reply_with_json(
     message: Message,
     payload: dict,
-    caption: str = "JSON is too long, sending it as a file.",
+    caption: str = "JSON is too loooooong, imma send it as a file...",
 ) -> None:
     text = dumps(payload)
     if len(text) <= MAX_JSON_TEXT:

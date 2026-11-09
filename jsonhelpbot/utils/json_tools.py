@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-MAX_JSON_TEXT = 3500
+MAX_JSON_TEXT = 4095
 
 
 def dumps(data: Any) -> str:
