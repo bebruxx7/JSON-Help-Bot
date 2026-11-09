@@ -5,7 +5,7 @@ from typing import Any
 from aiogram import Bot
 from aiogram.types import InputPollOption, MessageEntity, ReplyParameters
 
-from jsonhelpbot.serializers.schema import MEDIA_METHODS
+from jsonhelpbot.serializers.schema import EXTRA_KEYS, MEDIA_METHODS
 
 
 class PayloadError(ValueError):
@@ -25,26 +25,23 @@ _MEDIA_EXTRA_FIELDS = {
 
 
 def build_send_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    if not isinstance(payload, dict):
-        raise PayloadError("JSON payload must be an object")
-    message_type = payload.get("type")
-    if not isinstance(message_type, str) or not message_type:
-        raise PayloadError("Missing string field 'type'")
+    message = extract_message(payload)
+    message_type = detect_type(message)
     if message_type == "text":
-        return _text_call(payload)
+        return _text_call(message)
     if message_type in MEDIA_METHODS:
-        return _media_call(message_type, payload)
+        return _media_call(message_type, message)
     if message_type == "location":
-        return _location_call(payload)
+        return _location_call(message)
     if message_type == "venue":
-        return _venue_call(payload)
+        return _venue_call(message)
     if message_type == "contact":
-        return _contact_call(payload)
+        return _contact_call(message)
     if message_type == "poll":
-        return _poll_call(payload)
+        return _poll_call(message)
     if message_type == "dice":
-        return _dice_call(payload)
-    raise PayloadError(f"Unknown type: {message_type!r}")
+        return _dice_call(message)
+    raise PayloadError("The message does not contain supported content")
 
 
 async def send_from_json(
@@ -60,12 +57,35 @@ async def send_from_json(
     await method(chat_id=chat_id, **kwargs)
 
 
-def _text_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    text = payload.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise PayloadError("type='text' requires a non-empty 'text' field")
+def extract_message(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise PayloadError("JSON payload must be an object")
+    wrapped = payload.get("message")
+    if isinstance(wrapped, dict):
+        return wrapped
+    if "update_id" in payload:
+        raise PayloadError("The update does not contain a 'message' object")
+    return payload
+
+
+def detect_type(message: dict[str, Any]) -> str | None:
+    if isinstance(message.get("text"), str):
+        return "text"
+    for key in MEDIA_METHODS:
+        if key in message:
+            return key
+    for key in EXTRA_KEYS:
+        if key in message:
+            return key
+    return None
+
+
+def _text_call(message: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    text = message.get("text")
+    if not isinstance(text, str) or not text:
+        raise PayloadError("The message has no 'text'")
     kwargs: dict[str, Any] = {"text": text}
-    entities = _entities(payload.get("entities"))
+    entities = _entities(message.get("entities"))
     if entities:
         kwargs["entities"] = entities
     return "send_message", kwargs
@@ -73,23 +93,22 @@ def _text_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
 
 def _media_call(
     message_type: str,
-    payload: dict[str, Any],
+    message: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
-    media = payload.get("media")
-    if not isinstance(media, dict):
-        raise PayloadError(f"type='{message_type}' requires a 'media' object")
-    source = media.get("url") or media.get("file_id")
-    if not isinstance(source, str) or not source:
-        raise PayloadError("'media' must contain either 'file_id' or 'url'")
+    media = message.get(message_type)
+    source = _find_source(media)
+    if source is None:
+        raise PayloadError(f"'{message_type}' does not contain 'file_id' or 'url'")
     kwargs: dict[str, Any] = {message_type: source}
-    caption = payload.get("caption")
+    caption = message.get("caption")
     if isinstance(caption, str) and caption:
         kwargs["caption"] = caption
-        caption_entities = _entities(payload.get("caption_entities"))
+        caption_entities = _entities(message.get("caption_entities"))
         if caption_entities:
             kwargs["caption_entities"] = caption_entities
+    extra = _extra_media_data(media)
     for field in _MEDIA_EXTRA_FIELDS[message_type]:
-        value = media.get(field)
+        value = extra.get(field)
         if isinstance(value, str) and value:
             kwargs[field] = value
         elif isinstance(value, int) and not isinstance(value, bool):
@@ -97,10 +116,10 @@ def _media_call(
     return MEDIA_METHODS[message_type], kwargs
 
 
-def _location_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    location = payload.get("location")
+def _location_call(message: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    location = message.get("location")
     if not isinstance(location, dict):
-        raise PayloadError("type='location' requires a 'location' object")
+        raise PayloadError("The message has no 'location' object")
     latitude, longitude = _coordinates(location)
     kwargs: dict[str, Any] = {"latitude": latitude, "longitude": longitude}
     if _is_number(location.get("horizontal_accuracy")):
@@ -112,10 +131,10 @@ def _location_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return "send_location", kwargs
 
 
-def _venue_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    venue = payload.get("venue")
+def _venue_call(message: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    venue = message.get("venue")
     if not isinstance(venue, dict):
-        raise PayloadError("type='venue' requires a 'venue' object")
+        raise PayloadError("The message has no 'venue' object")
     location = venue.get("location")
     if not isinstance(location, dict):
         raise PayloadError("'venue' must contain a 'location' object")
@@ -144,10 +163,10 @@ def _venue_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return "send_venue", kwargs
 
 
-def _contact_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    contact = payload.get("contact")
+def _contact_call(message: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    contact = message.get("contact")
     if not isinstance(contact, dict):
-        raise PayloadError("type='contact' requires a 'contact' object")
+        raise PayloadError("The message has no 'contact' object")
     phone_number = contact.get("phone_number")
     first_name = contact.get("first_name")
     if not isinstance(phone_number, str) or not phone_number:
@@ -165,10 +184,10 @@ def _contact_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return "send_contact", kwargs
 
 
-def _poll_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    poll = payload.get("poll")
+def _poll_call(message: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    poll = message.get("poll")
     if not isinstance(poll, dict):
-        raise PayloadError("type='poll' requires a 'poll' object")
+        raise PayloadError("The message has no 'poll' object")
     question = poll.get("question")
     if not isinstance(question, str) or not question:
         raise PayloadError("'poll' requires a non-empty 'question' field")
@@ -205,14 +224,36 @@ def _poll_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     return "send_poll", kwargs
 
 
-def _dice_call(payload: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    dice = payload.get("dice")
+def _dice_call(message: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    dice = message.get("dice")
     kwargs: dict[str, Any] = {}
     if isinstance(dice, dict):
         emoji = dice.get("emoji")
         if isinstance(emoji, str) and emoji:
             kwargs["emoji"] = emoji
     return "send_dice", kwargs
+
+
+def _find_source(media: Any) -> str | None:
+    if isinstance(media, str):
+        return media or None
+    if isinstance(media, dict):
+        source = media.get("url") or media.get("file_id")
+        if isinstance(source, str) and source:
+            return source
+        return None
+    if isinstance(media, list):
+        for item in reversed(media):
+            source = _find_source(item)
+            if source is not None:
+                return source
+    return None
+
+
+def _extra_media_data(media: Any) -> dict[str, Any]:
+    if isinstance(media, list) and media:
+        media = media[-1]
+    return media if isinstance(media, dict) else {}
 
 
 def _entities(raw: Any) -> list[MessageEntity] | None:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-SCHEMA_VERSION = 1
-
 MEDIA_METHODS = {
     "photo": "send_photo",
     "video": "send_video",
@@ -13,14 +11,10 @@ MEDIA_METHODS = {
     "video_note": "send_video_note",
 }
 
-EXTRA_TYPES = frozenset(
-    {
-        "location",
-        "venue",
-        "contact",
-        "poll",
-        "dice",
-    }
+EXTRA_KEYS = (
+    "location",
+    "venue",
+    "contact",
+    "poll",
+    "dice",
 )
-
-SUPPORTED_TYPES = frozenset({"text", *MEDIA_METHODS, *EXTRA_TYPES})

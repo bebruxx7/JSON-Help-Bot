@@ -5,11 +5,10 @@ import logging
 
 from aiogram import Bot, Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import Message
+from aiogram.types import Message, Update
 
 from jsonhelpbot.serializers.json_to_message import PayloadError, send_from_json
-from jsonhelpbot.serializers.message_to_json import content_type_of, message_to_dict
-from jsonhelpbot.serializers.schema import SUPPORTED_TYPES
+from jsonhelpbot.serializers.message_to_json import update_to_dict
 from jsonhelpbot.utils.json_tools import loads_payload
 from jsonhelpbot.utils.replies import reply_with_json
 
@@ -20,25 +19,21 @@ MAX_JSON_FILE_BYTES = 5 * 1024 * 1024
 
 
 @router.message()
-async def convert_message(message: Message, bot: Bot) -> None:
+async def convert_message(message: Message, bot: Bot, event_update: Update) -> None:
     if message.text is not None:
         payload = loads_payload(message.text)
         if payload is not None:
             await _render(message, payload, bot)
             return
         if message.text.lstrip().startswith("{"):
-            await message.reply(
-                "Could not parse JSON: expected an object with a string 'type' field."
-            )
+            await message.reply("Could not parse JSON: expected a JSON object.")
             return
     if message.document is not None and _is_json_document(message):
         payload = await _payload_from_document(message, bot)
         if payload is not None:
             await _render(message, payload, bot)
         return
-    if content_type_of(message) not in SUPPORTED_TYPES:
-        return
-    await reply_with_json(message, message_to_dict(message))
+    await reply_with_json(message, update_to_dict(event_update))
 
 
 async def _render(message: Message, payload: dict, bot: Bot) -> None:
@@ -74,9 +69,7 @@ async def _payload_from_document(message: Message, bot: Bot) -> dict | None:
         return None
     payload = loads_payload(raw)
     if payload is None:
-        await message.reply(
-            "The file does not contain a valid JSON object with a string 'type' field."
-        )
+        await message.reply("The file does not contain a valid JSON object.")
         return None
     return payload
 

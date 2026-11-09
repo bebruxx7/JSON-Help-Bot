@@ -20,6 +20,4 @@ def loads_payload(raw: str | None) -> dict[str, Any] | None:
         data = json.loads(stripped)
     except json.JSONDecodeError:
         return None
-    if isinstance(data, dict) and isinstance(data.get("type"), str):
-        return data
-    return None
+    return data if isinstance(data, dict) else None
